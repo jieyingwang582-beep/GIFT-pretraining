@@ -1,6 +1,6 @@
 # Baseline Artifact
 
-This directory contains the baseline training implementation used in our SC26 paper.
+This directory contains the baseline training implementation used in our paper.
 
 ## Purpose
 
