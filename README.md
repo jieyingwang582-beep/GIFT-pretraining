@@ -9,8 +9,8 @@ This repository contains the code artifacts for our paper:
 We study low-precision gradient communication for large-scale LLM pretraining. This artifact includes three implementations used in the paper:
 
 - `baseline/`: full-precision communication baseline
-- `euclidean/`: direct Euclidean FP8 communication baseline
-- `GIFT/`: our geometry-informed FP8 communication method
+- `euclidean/`: direct Euclidean communication compression baseline
+- `GIFT/`: our geometry-informed communication compression method
 
 The three directories are intentionally separated because each one contains its own modified training entry points, Megatron code, and method-specific communication logic.
 
