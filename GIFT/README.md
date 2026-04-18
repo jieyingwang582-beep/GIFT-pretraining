@@ -1,26 +1,10 @@
 # GIFT Artifact
 
-This directory contains the implementation of **GIFT**, the geometry-informed FP8 communication method used in our paper.
+This directory contains the implementation of **GIFT**, the geometry-informed communication method used in the paper.
 
-## Purpose
+## Main Contents
 
-GIFT is the main method proposed in the paper.  
-Its key idea is to perform low-precision gradient communication in **geometry-aware coordinates** rather than directly in Euclidean parameter coordinates.
-
-Compared with the Euclidean FP8 baseline, GIFT introduces geometry-aware communication only where it is most beneficial.
-
-## Paper-relevant model scales
-
-In the paper, the main model scales are:
-
-- **Llama-300M**
-- **Llama-600M**
-
-Accordingly, this directory keeps two main run scripts for these two model configurations.
-
-## Directory contents
-
-### Main training entry
+### Training entry
 - `pretrain_gpt.py`
 
 ### Main run scripts
@@ -29,75 +13,74 @@ Accordingly, this directory keeps two main run scripts for these two model confi
 
 ### Code
 - `megatron/`
-- other modified Python files in this directory used by the GIFT communication path
+- other modified Python files used by the GIFT communication path
 
-## Script descriptions
+## Configurations Covered
 
 ### `run_scripts/run_gift_300m.sh`
-Main GIFT script for the **300M** model configuration used in the paper.
+GIFT run script for the **300M** model configuration.
 
 ### `run_scripts/run_gift_600m.sh`
-Main GIFT script for the **600M** model configuration used in the paper.
+GIFT run script for the **600M** model configuration.
 
-## Method summary
+## Method Summary
 
-The practical GIFT design used in the paper follows three main simplifications:
+GIFT performs low-precision gradient communication in **geometry-aware coordinates** rather than directly in Euclidean parameter coordinates.
+
+The practical design used here follows three main simplifications:
 
 - retain only the input-side geometry
 - approximate the geometry using a low-rank representation
 - apply the geometry-aware branch selectively to the most vulnerable layers
 
-Most layers still use the standard Euclidean communication path, while selected layers use the geometry-informed transform.
+Most layers still use the standard communication path, while selected layers use the geometry-informed transform.
 
-## Notes on portability
+## Method-Specific Environment
 
-These scripts were rewritten as portable templates for artifact release. Before running on a new system, users should update the machine-specific fields in each script, including:
+The provided GIFT scripts use the following method-specific environment settings:
 
-- Slurm account name
-- partition name
-- number of nodes / tasks
-- module load commands
+- `IG_FP8Q_ALLREDUCE=1`
+- `IG_FP8Q_DTYPE=float8_e5m2`
+- `IG_USE_BATCHED_SOLVE=1`
+- `IG_BATCHED_SOLVE_MIN_BUCKET=2`
+- `IG_COMPILE_SOLVE_MODE=default`
+- `IG_COMPILE_MAPBACK=1`
+- `IG_COMPILE_DYNAMIC=0`
+- `IG_USE_INVERSE_BMM=1`
+- `IG_COMM_ASYNC=0`
+- `IG_COMM_NUM_BUCKETS=1`
+- `IG_COMPILE_SOLVE=0`
+- `IG_LINALG_BACKEND=default`
+
+The scripts also explicitly unset:
+
+- `MEGATRON_NATIVE_FP8_ALLREDUCE`
+- `MEGATRON_FP8_AR_DTYPE`
+
+before enabling the GIFT communication path.
+
+## What to Edit Before Running
+
+Please update the machine-specific fields in each script before use, such as:
+
+- Slurm account and partition
+- node count and task count
 - Python environment path
 - tokenizer path
 - dataset path
-- checkpoint/save path
+- checkpoint path
 - cache path
 
-The scripts intentionally do **not** preserve the original private filesystem layout used during development.
-
-## Changing GPU count
-
-The scripts are written with default distributed settings, but users may adapt them to their own systems.
+## Changing GPU Count
 
 If you want to change GPU count, you will typically need to edit:
 
 - `#SBATCH -N`
 - `#SBATCH --ntasks`
 - `GPUS_PER_NODE`
-- possibly batch-size-related settings if your hardware differs
 
-## Relationship to the other directories
+You may also need to adjust batch-related settings depending on your hardware.
 
-- `../baseline/` provides the high-precision communication baseline
-- `../euclidean/` provides the direct Euclidean FP8 communication baseline
-- `../GIFT/` provides the geometry-informed FP8 communication method
+## Reproduction Note
 
-## Expected role in the paper
-
-This directory provides the implementation of the paper’s main method.
-
-It is intended to support comparison against:
-
-- the high-precision baseline in `../baseline/`
-- the Euclidean FP8 baseline in `../euclidean/`
-
-## Reproduction guidance
-
-For artifact clarity, only the main paper-relevant GIFT scripts are kept here. Historical variants, machine-specific launch helpers, and unrelated experiment scripts are not required for the artifact workflow.
-
-This directory is intended to help readers and reviewers:
-
-- inspect the GIFT implementation
-- run the 300M GIFT configuration
-- run the 600M GIFT configuration
-- compare GIFT against the baseline and Euclidean FP8 versions
+Only the main paper-relevant GIFT scripts are kept here. Historical variants, machine-specific helpers, and unrelated experiment scripts are intentionally omitted.
