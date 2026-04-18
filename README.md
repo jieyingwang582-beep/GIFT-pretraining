@@ -1,4 +1,4 @@
-# SC26 Artifact for GIFT
+# Artifact for GIFT
 
 This repository contains the code artifacts for our SC26 paper:
 
