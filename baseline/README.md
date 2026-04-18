@@ -6,8 +6,8 @@ This directory contains the high-precision communication baseline used in the pa
 
 This implementation serves as the reference system for comparison against:
 
-- the Euclidean FP8 communication baseline
-- the GIFT geometry-informed FP8 communication method
+- the Euclidean communication compression baseline
+- the GIFT communication compression method
 
 ## Main Contents
 
