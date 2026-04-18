@@ -1,6 +1,6 @@
 # GIFT Artifact
 
-This directory contains the implementation of **GIFT**, the geometry-informed FP8 communication method used in our SC26 paper.
+This directory contains the implementation of **GIFT**, the geometry-informed FP8 communication method used in our paper.
 
 ## Purpose
 
