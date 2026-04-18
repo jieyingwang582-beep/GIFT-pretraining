@@ -1,6 +1,6 @@
 # Euclidean FP8 Artifact
 
-This directory contains the direct FP8 communication implementation in Euclidean parameter coordinates.
+This directory contains the direct communication compression implementation in Euclidean parameter coordinates.
 
 ## Main Contents
 
@@ -13,7 +13,7 @@ This directory contains the direct FP8 communication implementation in Euclidean
 
 ### Code
 - `megatron/`
-- other modified Python files used by the Euclidean FP8 communication path
+- other modified Python files used by the Euclidean communication compression path
 
 ## Configurations Covered
 
