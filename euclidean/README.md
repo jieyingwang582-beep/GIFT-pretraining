@@ -1,29 +1,10 @@
 # Euclidean FP8 Artifact
 
-This directory contains the **Euclidean FP8 communication baseline** used in our SC26 paper.
+This directory contains the direct FP8 communication implementation in Euclidean parameter coordinates.
 
-## Purpose
+## Main Contents
 
-This implementation corresponds to the direct low-precision communication baseline in the paper.  
-In this version, gradients are communicated in **Euclidean parameter coordinates** using FP8 communication, without the geometry-aware transform used in GIFT.
-
-This directory is intended to serve as the comparison point between:
-
-- the high-precision baseline in `../baseline/`
-- the geometry-informed method in `../GIFT/`
-
-## Paper-relevant model scales
-
-In the paper, the main model scales are:
-
-- **Llama-300M**
-- **Llama-600M**
-
-Accordingly, this directory keeps two main run scripts for these two model configurations.
-
-## Directory contents
-
-### Main training entry
+### Training entry
 - `pretrain_gpt.py`
 
 ### Main run scripts
@@ -32,62 +13,46 @@ Accordingly, this directory keeps two main run scripts for these two model confi
 
 ### Code
 - `megatron/`
-- other modified Python files in this directory used by the Euclidean FP8 communication baseline
+- other modified Python files used by the Euclidean FP8 communication path
 
-## Script descriptions
+## Configurations Covered
 
 ### `run_scripts/run_euclidean_300m.sh`
-Main Euclidean FP8 script for the **300M** model configuration used in the paper.
+Euclidean FP8 run script for the **300M** model configuration.
 
 ### `run_scripts/run_euclidean_600m.sh`
-Main Euclidean FP8 script for the **600M** model configuration used in the paper.
+Euclidean FP8 run script for the **600M** model configuration.
 
-## Notes on portability
+## Method-Specific Environment
 
-These scripts were rewritten as portable templates for artifact release. Before running on a new system, users should update the machine-specific fields in each script, including:
+The Euclidean FP8 implementation does not require the geometry-aware environment settings used in the `GIFT/` directory.
 
-- Slurm account name
-- partition name
-- number of nodes / tasks
-- module load commands
+In the provided scripts, the main method-specific runtime setting is:
+
+- `FP8_MLP_BOUNDARY_STEP_LOG=0`
+
+## What to Edit Before Running
+
+Please update the machine-specific fields in each script before use, such as:
+
+- Slurm account and partition
+- node count and task count
 - Python environment path
 - tokenizer path
 - dataset path
-- checkpoint/save path
+- checkpoint path
 - cache path
 
-The scripts intentionally do **not** preserve the original private filesystem layout used during development.
-
-## Changing GPU count
-
-The scripts are written with default distributed settings, but users may adapt them to their own systems.
+## Changing GPU Count
 
 If you want to change GPU count, you will typically need to edit:
 
 - `#SBATCH -N`
 - `#SBATCH --ntasks`
 - `GPUS_PER_NODE`
-- possibly batch-size-related settings if your hardware differs
 
-## Expected role in the paper
+You may also need to adjust batch-related settings depending on your hardware.
 
-This directory provides the **Euclidean FP8 communication baseline** used in the paper’s comparisons.
+## Reproduction Note
 
-It is the direct baseline against which we compare the geometry-informed communication method in `../GIFT/`.
-
-## Relationship to the other directories
-
-- `../baseline/` provides the high-precision communication baseline
-- `../euclidean/` provides the direct Euclidean FP8 communication baseline
-- `../GIFT/` provides the geometry-informed FP8 communication method
-
-## Reproduction guidance
-
-For artifact clarity, only the main paper-relevant Euclidean scripts are kept here. Historical variants, machine-specific launch helpers, and unrelated experiment scripts are not required for the artifact workflow.
-
-This directory is intended to help readers and reviewers:
-
-- inspect the Euclidean FP8 implementation
-- run the 300M Euclidean FP8 configuration
-- run the 600M Euclidean FP8 configuration
-- compare this implementation against the high-precision and GIFT versions
+Only the main paper-relevant Euclidean scripts are kept here. Historical variants, machine-specific helpers, and unrelated experiment scripts are intentionally omitted.
