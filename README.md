@@ -1,6 +1,6 @@
 # Artifact for GIFT
 
-This repository contains the code artifacts for our SC26 paper:
+This repository contains the code artifacts for our paper:
 
 **GIFT: Geometry-Informed Low-precision Gradient Communication for Large-Scale LLM Pretraining**
 
