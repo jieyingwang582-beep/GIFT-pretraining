@@ -134,6 +134,11 @@ class FisherManager:
     def _is_fp8_sync_step(self, step: int) -> bool:
         return step >= 1 and ((step - 1) % self.fp8_sync_freq == 0)
 
+    def _owner_rank_for_layer(self, layer_id: int) -> int:
+        if self.world_size <= 1:
+            return 0
+        return layer_id % self.world_size
+
     def _is_target_ig_module(self, name: str, module: nn.Module) -> bool:
         lname = name.lower()
         if "embedding" in lname:
@@ -217,6 +222,12 @@ class FisherManager:
         self._hook_handles = []
         self._hooks_registered = False
 
+    def _refresh_hooks_for_step(self, step: int):
+        if self._is_collect_step(step):
+            self._register_hooks()
+        else:
+            self._remove_hooks()
+
     def _get_input_hook(self, name):
         def hook(module, inputs):
             st = self.stats[name]
@@ -263,6 +274,7 @@ class FisherManager:
         if not prepared:
             return
 
+
         if self.group is not None:
             flat = torch.cat([A.contiguous().view(-1) for _, A in prepared], dim=0)
             dist.all_reduce(flat, op=dist.ReduceOp.SUM, group=self.group)
@@ -278,10 +290,42 @@ class FisherManager:
         else:
             reduced = prepared
 
+        if self.group is None or self.world_size <= 1:
+            for name, A_full in reduced:
+                A_sym = 0.5 * (A_full + A_full.transpose(-1, -2))
+                A_hat = _build_lowrank_plus_diag(A_sym, _IG_LOWRANK_R_A, self.damping)
+                L_A = _chol_with_jitter(A_hat, self.damping)
+
+                if self.factor_decay is not None and 0.0 < self.factor_decay < 1.0 and name in self.factors:
+                    old = self.factors[name]
+                    L_A = old.L_A.mul(self.factor_decay).add(L_A, alpha=1.0 - self.factor_decay)
+
+                self.factors[name] = LayerFactors(L_A.contiguous())
+            return
+
+        dev = reduced[0][1].device
+        dtype = reduced[0][1].dtype
+        total_numel = sum(A.numel() for _, A in reduced)
+        flat_L = torch.zeros(total_numel, dtype=dtype, device=dev)
+
+        offset = 0
         for name, A_full in reduced:
-            A_sym = 0.5 * (A_full + A_full.transpose(-1, -2))
-            A_hat = _build_lowrank_plus_diag(A_sym, _IG_LOWRANK_R_A, self.damping)
-            L_A = _chol_with_jitter(A_hat, self.damping)
+            n = A_full.numel()
+            st = self.stats[name]
+            if self._owner_rank_for_layer(st.layer_id) == self.rank:
+                A_sym = 0.5 * (A_full + A_full.transpose(-1, -2))
+                A_hat = _build_lowrank_plus_diag(A_sym, _IG_LOWRANK_R_A, self.damping)
+                L_A_new = _chol_with_jitter(A_hat, self.damping).contiguous()
+                flat_L[offset:offset + n].copy_(L_A_new.view(-1))
+            offset += n
+
+        dist.all_reduce(flat_L, op=dist.ReduceOp.SUM, group=self.group)
+
+        offset = 0
+        for name, A_full in reduced:
+            n = A_full.numel()
+            L_A = flat_L[offset:offset + n].view_as(A_full).clone()
+            offset += n
 
             if self.factor_decay is not None and 0.0 < self.factor_decay < 1.0 and name in self.factors:
                 old = self.factors[name]
@@ -389,6 +433,7 @@ def _chol_with_jitter(M: torch.Tensor, damping: float) -> torch.Tensor:
     except RuntimeError:
         eps = max(float(damping), 1e-6)
         return torch.linalg.cholesky(M + eps * I)
+
 
 
 def _build_lowrank_plus_diag(M: torch.Tensor, rank: int, damping: float) -> torch.Tensor:
@@ -575,6 +620,7 @@ def precondition_gradients_with_ef(model: nn.Module, manager: FisherManager, glo
 
     _run_right_lowrank_mapback_stage(finalized_entries)
 
+
     did_apply = False
     for item in finalized_entries:
         grad_after = item["grad_after_f32"]
@@ -727,6 +773,8 @@ def wrap_optimizer_step_once(model, optimizer, manager, get_step):
         return
     optimizer._kfac_fp8_wrapped = True
 
+    manager._refresh_hooks_for_step(manager._hook_step)
+
     _orig_step = optimizer.step
     import megatron.core.optimizer.fisher_manager as fisher_manager_module
 
@@ -737,7 +785,6 @@ def wrap_optimizer_step_once(model, optimizer, manager, get_step):
 
         setattr(real, "_ig_profile_manager_ref", manager)
 
-        manager._register_hooks()
         manager.step_and_update(step)
         did_apply, synced_ids = precondition_gradients_with_ef(real, manager, global_step=step)
 
@@ -750,6 +797,7 @@ def wrap_optimizer_step_once(model, optimizer, manager, get_step):
 
         out = _orig_step(*args, **kwargs)
         manager._hook_step += 1
+        manager._refresh_hooks_for_step(manager._hook_step)
         return out
 
     optimizer.step = step_wrapper
